@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Welcome to Connect Four!</h1>
+<h2>Let's play!</h2>
+<br>
+<div class="col-md-6">
+    <table id="board" class="table table-bordered table-hover">
+      {% for row in rows reversed%}
+      <tr>
+        {% for cell in row %}
+        <td id="td{{forloop.parentloop.counter}}.{{forloop.counter0}}">{{cell}}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </table>
+
+    <form action="." method="post">{% csrf_token %}
+        <input name="selected" type="hidden">
+        <input class="btn btn-primary" value="Submit!" type="submit">
+    </form>
+
+</div>
+
+{% endblock content %}
+
+{% block scripts %}
+<script type="application/javascript">
+$(document).ready(function(){
+    lastTarget = null;
+    $("#board").delegate("td", "click", function(evt){
+        console.log(evt.currentTarget.id);
+        // check if cell is taken
+        if (!$(evt.currentTarget).hasClass("active")) {
+            // not active, mark it as the target
+            if (lastTarget != null) {
+                $(lastTarget).removeClass("success");
+            }
+            lastTarget = evt.currentTarget;
+            $(evt.currentTarget).addClass("success");
+            $('input[name="selected"]').val(evt.currentTarget.id);
+        } else {
+            alert("Chose an empty spot!");
+        }
+    });
+
+    $('input[type="submit"]').click(function() {
+        // $.post(window.location, {move: evt.currentTarget.id})
+    });
+
+});
+</script>
+{% endblock scripts %}
