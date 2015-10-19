@@ -1,0 +1,24 @@
+# file managed by ansible
+# {{django_app}}_uwsgi.ini file
+[uwsgi]
+
+# Django-related settings
+# the base directory (full path)
+chdir           = {{app_path}}/{{django_app}}
+# Django's wsgi file
+module          = {{django_app}}.wsgi
+# the virtualenv (full path)
+home            = {{app_path}}/virtualenv
+
+# process-related settings
+# master
+master          = true
+# maximum number of worker processes
+processes       = 10
+# the socket (use the full path to be safe
+socket          = /tmp/{{django_app}}.sock
+# ... with appropriate permissions - may be needed
+# chmod-socket    = 664
+chown-socket    = www-data:www-data
+clear environment on exit
+vacuum          = true

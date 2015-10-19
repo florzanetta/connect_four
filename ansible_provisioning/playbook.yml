@@ -1,0 +1,122 @@
+---
+- hosts: 127.0.0.1
+  connection: local
+  vars:
+    app_path: /home/ubuntu/test_app
+    django_app: mysite
+    venv: "{{app_path}}/virtualenv"
+
+  tasks:
+  # run apt update
+  - name: ensure apt index is up to date
+    apt: update_cache=yes cache_valid_time=3600
+    sudo: yes
+
+  # install and enable nginx
+  - name: ensure nginx is installed
+    apt: pkg=nginx state=installed
+    sudo: yes
+  - name: ensure nginx is running and enabled at boot
+    service: name=nginx state=started enabled=yes
+    sudo: yes
+
+  # install python3, pip and virtualenv
+  - name: ensure python3 is installed
+    apt: pkg=python3 state=installed
+    sudo: yes
+
+  - name: ensure python3-dev is installed
+    apt: pkg=python3-dev state=installed
+    sudo: yes
+
+  - name: check if pip is installed
+    command: pip
+    register: result_pip
+    changed_when: False
+    ignore_errors: True
+
+  - name: download pip
+    get_url:
+      validate_certs: no
+      url: https://bootstrap.pypa.io/get-pip.py
+      dest: /tmp/get-pip.py
+    when: result_pip|failed
+
+  - name: install pip for python3
+    command: python3 /tmp/get-pip.py
+    when: result_pip|failed
+    sudo: yes
+
+  - name: ensure virtualenv is installed
+    pip: name=virtualenv
+    sudo: yes
+
+  # prepare the environment
+  - name: ensure app directory exists
+    file: path={{app_path}} state=directory mode=0755
+
+  - name: copy requirements.txt to box
+    copy: src=requirements.txt dest={{app_path}}/requirements.txt
+
+  # create virtualenv
+  - name: create virtualenv
+    pip:
+      requirements: "{{app_path}}/requirements.txt"
+      virtualenv: "{{app_path}}/virtualenv"
+
+  - name: create virtualenv wrapper
+    template: src=virtualenv_wrapper.sh.j2 dest={{app_path}}/virtualenv_wrapper.sh mode=0755
+
+  - name: create django project
+    command: "{{app_path}}/virtualenv_wrapper.sh django-admin.py startproject {{django_app}}"
+    args:
+      chdir: "{{app_path}}"
+
+  - name: initialize django database
+    command: "{{app_path}}/virtualenv_wrapper.sh {{app_path}}/{{django_app}}/manage.py migrate"
+    args:
+      chdir: "{{app_path}}/{{django_app}}"
+  # https://github.com/nickjj/ansible-nginx/blob/master/tasks/main.yml
+  # - name: configure nginx django site
+  #   template: src=nginx_conf.j2 dest=/etc/nginx/nginx.conf
+  #     group: root
+  #     owner: root
+  #   notify:
+  #     - reload nginx
+
+  - name: remove default nginx site config
+    file: path=/etc/nginx/sites-enabled/default state=absent
+    sudo: yes
+
+  - name: install django nginx config
+    template:
+      src: django_nginx.conf.j2
+      dest: "/etc/nginx/sites-enabled/{{django_app}}.conf"
+      group: root
+      owner: root
+    sudo: yes
+    notify:
+      - reload nginx
+  # run django
+  # sudo uwsgi --socket /tmp/mysite.sock --wsgi-file test.py --chown-socket www-data:www-data
+  - name: create django uwsgi ini file
+    template:
+      src: django_uwsgi.ini.j2
+      dest: "{{app_path}}/{{django_app}}/{{django_app}}_uwsgi.ini"
+
+  - name: make uwsgi start at boot
+    lineinfile:
+      dest: /etc/rc.local
+      line: /home/vagrant/test_app/virtualenv/bin/uwsgi --virtualenv /home/vagrant/test_app/virtualenv/ --ini /home/vagrant/test_app/mysite/mysite_uwsgi.ini
+      state: present
+      insertbefore: "^exit 0"
+    sudo: yes
+
+  handlers:
+  - name: restart nginx
+    service: name=nginx state=restarted
+    sudo: yes
+
+  - name: reload nginx
+    service: name=nginx state=reloaded
+    sudo: yes
