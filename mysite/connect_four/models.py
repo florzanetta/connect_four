@@ -16,6 +16,7 @@ class Board(models.Model):
     user1 = models.ForeignKey(User, related_name='user1')
     user2 = models.ForeignKey(User, related_name='user2')
     next_turn = models.ForeignKey(User, related_name='user_next_turn')
+    winner = models.ForeignKey(User, null=True, related_name='winner')
 
     def get_rows(self):
         rows = []
