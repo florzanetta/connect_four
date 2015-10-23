@@ -3,9 +3,17 @@
 <h2>Let's play!</h2>
 <h3 id="turn"></h3>
 <br>
-<div class="col-md-6">
+<div ng-controller="MyController" class="col-md-6">
+
+    {%verbatim%}
+
     <table id="board" class="table table-bordered table-hover">
     </table>
+
+
+    <p>Nothing here {{'yet' + '!'}}
+
+    {%endverbatim%}
 
     <form id="move-form">{% csrf_token %}
         <input name="selected" type="hidden">
@@ -19,6 +27,23 @@
 
 {% endblock content %} {% block scripts %}
 <script type="application/javascript">
+var myapp = angular.module('myapp', ['ngCookies']);
+
+myapp.config(['$httpProvider', function($httpProvider) {
+    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+}]);
+
+ myapp.controller("MyController", function($scope, $http) {
+     data = { selected: "td1.2" };
+     $http.post('#', data)
+         .then(function() {console.log("yes")}, function() {console.log("no")});
+     // angular.fromJson();
+ });
+
+
+</script>
+<!-- <script type="application/javascript">
     $(document).ready(function() {
         // globals
         var lastTarget = null;
@@ -144,5 +169,5 @@
         getUpdatedBoard();
 
     });
-</script>
+</script> -->
 {% endblock scripts %}
