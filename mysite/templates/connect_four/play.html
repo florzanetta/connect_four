@@ -5,15 +5,13 @@
 <br>
 <div ng-controller="MyController" class="col-md-6">
 
-    {%verbatim%}
-
     <table id="board" class="table table-bordered table-hover">
+        <tbody>
+            <tr ng:repeat="row in board | orderBy:id:reverse track by $index">
+                <td ng:repeat="cell in row track by $index">{{cell}}</td>
+            </tr>
+        </tbody>
     </table>
-
-
-    <p>Nothing here {{'yet' + '!'}}
-
-    {%endverbatim%}
 
     <form id="move-form">{% csrf_token %}
         <input name="selected" type="hidden">
@@ -27,21 +25,33 @@
 
 {% endblock content %} {% block scripts %}
 <script type="application/javascript">
-var myapp = angular.module('myapp', ['ngCookies']);
+    var myapp = angular.module('myapp', ['ngCookies']);
 
-myapp.config(['$httpProvider', function($httpProvider) {
-    $httpProvider.defaults.xsrfCookieName = 'csrftoken';
-    $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
-}]);
+    myapp.config(['$httpProvider', function($httpProvider) {
+        $httpProvider.defaults.xsrfCookieName = 'csrftoken';
+        $httpProvider.defaults.xsrfHeaderName = 'X-CSRFToken';
+    }]);
 
- myapp.controller("MyController", function($scope, $http) {
-     data = { selected: "td1.2" };
-     $http.post('#', data)
-         .then(function() {console.log("yes")}, function() {console.log("no")});
-     // angular.fromJson();
- });
+    myapp.controller("MyController", function($scope, $http) {
+        $scope.update_table = function(data) {
+            $scope.board = data["data"]["rows"];
+            //  console.log(data["data"]["rows"]);
+        }
+        $scope.log_error = function(xhr, errmsg, err) {
+                $('#results').html("<div class='alert-box alert radius'" +
+                    "data-alert>Oops! We have encountered an error: " + errmsg +
+                    " <a href='#' class='close'>&times;</a></div>");
+                // add the error to the dom
+                console.log(xhr.status + ": " + xhr.responseText);
+        }
+        data = {
+            selected: "td1.2"
+        };
+        $http.post('#', data).then($scope.update_table, $scope.log_error);
+        // angular.fromJson();
 
 
+    });
 </script>
 <!-- <script type="application/javascript">
     $(document).ready(function() {
